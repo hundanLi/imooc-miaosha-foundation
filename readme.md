@@ -1,1 +1,689 @@
 # 电商秒杀基础项目
+
+## 1. 项目初始化
+
+### 1.1 创建Spring Boot项目
+
+利用IDEA创建Spring Boot工程，勾选spring-boot-starter-web，jdbc，mysql，devtool等依赖。同时添加MyBatis-Plus与代码生成相关的依赖。
+
+```xml
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-jdbc</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-devtools</artifactId>
+            <scope>runtime</scope>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>mysql</groupId>
+            <artifactId>mysql-connector-java</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-configuration-processor</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.junit.vintage</groupId>
+                    <artifactId>junit-vintage-engine</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+        <!--MyBatis Plus-->
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-boot-starter</artifactId>
+            <version>3.3.2</version>
+        </dependency>
+        <!--mybatis plus代码生成器-->
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-generator</artifactId>
+            <version>3.3.2</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.velocity</groupId>
+            <artifactId>velocity-engine-core</artifactId>
+            <version>2.2</version>
+        </dependency>
+
+    </dependencies>
+
+```
+
+### 1.2 初始化数据库
+
+运行`schema.sql`创建数据库和表
+
+```mysql
+CREATE DATABASE /*!32312 IF NOT EXISTS*/ `imooc_miaosha` /*!40100 DEFAULT CHARACTER SET utf8 COLLATE utf8_unicode_ci */;
+
+USE `imooc_miaosha`;
+
+--
+-- Table structure for table `item`
+--
+-- ----------------------------
+-- Table structure for item
+-- ----------------------------
+DROP TABLE IF EXISTS `item`;
+CREATE TABLE `item`  (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `title` varchar(255) CHARACTER SET utf8 COLLATE utf8_bin NOT NULL DEFAULT '',
+  `price` decimal(64, 2) NOT NULL DEFAULT 0.00,
+  `description` varchar(500) CHARACTER SET utf8 COLLATE utf8_bin NOT NULL DEFAULT '',
+  `sales` int(100) NOT NULL DEFAULT 0,
+  `img_url` varchar(5000) CHARACTER SET utf8 COLLATE utf8_bin NOT NULL DEFAULT '',
+  PRIMARY KEY (`id`) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 5 CHARACTER SET = utf8 COLLATE = utf8_bin ROW_FORMAT = Compact;
+
+-- ----------------------------
+-- Records of item
+-- ----------------------------
+INSERT INTO `item` VALUES (1, 'iphone99', 800.00, '最好用的iphone', 3, 'https://timgsa.baidu.com/timg?image&quality=80&size=b9999_10000&sec=1563645867825&di=65cbf1d86165f7185ce7772e2e8a4bca&imgtype=0&src=http%3A%2F%2Fp0.ifengimg.com%2Fpmop%2F2017%2F1127%2F753C746E59ACA849F681F4FC5B75ACD494092110_size15_w600_h400.jpeg');
+INSERT INTO `item` VALUES (2, 'iphone99', 800.00, '最好用的iphone', 0, 'https://timgsa.baidu.com/timg?image&quality=80&size=b9999_10000&sec=1563645867825&di=65cbf1d86165f7185ce7772e2e8a4bca&imgtype=0&src=http%3A%2F%2Fp0.ifengimg.com%2Fpmop%2F2017%2F1127%2F753C746E59ACA849F681F4FC5B75ACD494092110_size15_w600_h400.jpeg');
+INSERT INTO `item` VALUES (3, 'iphone8', 200.00, '第二好用的iphone', 3, 'https://timgsa.baidu.com/timg?image&quality=80&size=b9999_10000&sec=1563647556769&di=cc5c9241446eee425165e9b04a87768c&imgtype=0&src=http%3A%2F%2Fi9.hexun.com%2F2018-03-17%2F192644421.jpg');
+INSERT INTO `item` VALUES (4, 'iphone8', 200.00, '第二好用的iphone', 0, 'https://timgsa.baidu.com/timg?image&quality=80&size=b9999_10000&sec=1563647556769&di=cc5c9241446eee425165e9b04a87768c&imgtype=0&src=http%3A%2F%2Fi9.hexun.com%2F2018-03-17%2F192644421.jpg');
+
+-- ----------------------------
+-- Table structure for item_stock
+-- ----------------------------
+DROP TABLE IF EXISTS `item_stock`;
+CREATE TABLE `item_stock`  (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `stock` int(11) NOT NULL DEFAULT 0,
+  `item_id` int(11) NOT NULL,
+  PRIMARY KEY (`id`) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 13 CHARACTER SET = utf8 COLLATE = utf8_bin ROW_FORMAT = Compact;
+
+-- ----------------------------
+-- Records of item_stock
+-- ----------------------------
+INSERT INTO `item_stock` VALUES (9, 97, 1);
+INSERT INTO `item_stock` VALUES (10, 100, 2);
+INSERT INTO `item_stock` VALUES (11, 97, 3);
+INSERT INTO `item_stock` VALUES (12, 300, 4);
+
+-- ----------------------------
+-- Table structure for order_info
+-- ----------------------------
+DROP TABLE IF EXISTS `order_info`;
+CREATE TABLE `order_info`  (
+  `id` varchar(32) CHARACTER SET utf8 COLLATE utf8_bin NOT NULL,
+  `user_id` int(11) NOT NULL DEFAULT 0,
+  `item_id` int(11) NOT NULL DEFAULT 0,
+  `item_price` decimal(10, 2) NOT NULL DEFAULT 0.00,
+  `amount` int(11) NOT NULL DEFAULT 0,
+  `order_price` decimal(40, 2) NOT NULL DEFAULT 0.00,
+  `promo_id` int(11) NOT NULL DEFAULT 0,
+  PRIMARY KEY (`id`) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8 COLLATE = utf8_bin ROW_FORMAT = Compact;
+
+-- ----------------------------
+-- Records of order_info
+-- ----------------------------
+INSERT INTO `order_info` VALUES ('2019080200000000', 40, 1, 23.00, 1, 23.00, 1);
+INSERT INTO `order_info` VALUES ('2019080200000100', 40, 1, 23.00, 1, 23.00, 1);
+INSERT INTO `order_info` VALUES ('2019080200000200', 40, 1, 23.00, 1, 23.00, 1);
+INSERT INTO `order_info` VALUES ('2019080200000300', 40, 3, 200.00, 1, 200.00, 0);
+INSERT INTO `order_info` VALUES ('2019080200000400', 40, 3, 200.00, 1, 200.00, 0);
+INSERT INTO `order_info` VALUES ('2019080200000500', 40, 3, 200.00, 1, 200.00, 0);
+
+-- ----------------------------
+-- Table structure for promo
+-- ----------------------------
+DROP TABLE IF EXISTS `promo`;
+CREATE TABLE `promo`  (
+  `id` int(100) NOT NULL AUTO_INCREMENT,
+  `promo_name` varchar(255) CHARACTER SET utf8 COLLATE utf8_bin NOT NULL DEFAULT '',
+  `start_date` datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
+  `end_date` datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
+  `item_id` int(11) NOT NULL DEFAULT 0,
+  `promo_item_price` decimal(10, 2) NOT NULL DEFAULT 0.00,
+  PRIMARY KEY (`id`) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 3 CHARACTER SET = utf8 COLLATE = utf8_bin ROW_FORMAT = Compact;
+
+-- ----------------------------
+-- Records of promo
+-- ----------------------------
+INSERT INTO `promo` VALUES (1, 'iphone大减价', '2019-08-01 19:55:47', '2019-08-09 19:55:52', 1, 23.00);
+INSERT INTO `promo` VALUES (2, 'iphone8大减价', '2019-08-27 20:17:17', '2019-09-05 20:18:18', 3, 3.00);
+
+-- ----------------------------
+-- Table structure for sequence_info
+-- ----------------------------
+DROP TABLE IF EXISTS `sequence_info`;
+CREATE TABLE `sequence_info`  (
+  `name` varchar(255) CHARACTER SET utf8 COLLATE utf8_bin NOT NULL,
+  `current_value` int(11) NOT NULL DEFAULT 0,
+  `step` int(11) NOT NULL DEFAULT 0,
+  PRIMARY KEY (`name`) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8 COLLATE = utf8_bin ROW_FORMAT = Compact;
+
+-- ----------------------------
+-- Records of sequence_info
+-- ----------------------------
+INSERT INTO `sequence_info` VALUES ('order_info', 6, 1);
+
+-- ----------------------------
+-- Table structure for user_info
+-- ----------------------------
+DROP TABLE IF EXISTS `user_info`;
+CREATE TABLE `user_info`  (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `name` varchar(64) CHARACTER SET utf8 COLLATE utf8_bin NOT NULL DEFAULT '',
+  `gender` tinyint(2) NOT NULL DEFAULT 0 COMMENT '1代表男性\r\n',
+  `age` int(11) NOT NULL DEFAULT 0,
+  `telephone` varchar(64) CHARACTER SET utf8 COLLATE utf8_bin NOT NULL DEFAULT '',
+  `register_mode` varchar(64) CHARACTER SET utf8 COLLATE utf8_bin NOT NULL DEFAULT '' COMMENT '//byphone,bywechat,byalipay,',
+  `third_party_id` int(64) NOT NULL DEFAULT 0,
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `telephone_unique_index`(`telephone`) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 56 CHARACTER SET = utf8 COLLATE = utf8_bin ROW_FORMAT = Compact;
+
+-- ----------------------------
+-- Records of user_info
+-- ----------------------------
+INSERT INTO `user_info` VALUES (40, '1', 1, 1, '123', 'byphone', 0);
+INSERT INTO `user_info` VALUES (52, '1', 1, 1, '111111', 'byphone', 0);
+INSERT INTO `user_info` VALUES (53, '1', 1, 11111111, '11', 'byphone', 0);
+INSERT INTO `user_info` VALUES (55, '1', 1, 1, '111', 'byphone', 0);
+
+-- ----------------------------
+-- Table structure for user_password
+-- ----------------------------
+DROP TABLE IF EXISTS `user_password`;
+CREATE TABLE `user_password`  (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `encrypt_password` varchar(128) CHARACTER SET utf8 COLLATE utf8_bin NOT NULL DEFAULT '',
+  `user_id` int(11) NOT NULL DEFAULT 0,
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `use_id`(`user_id`) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 25 CHARACTER SET = utf8 COLLATE = utf8_bin ROW_FORMAT = Compact;
+
+-- ----------------------------
+-- Records of user_password
+-- ----------------------------
+INSERT INTO `user_password` VALUES (18, 'ICy5YqxZB1uWSwcVLSNLcA==', 40);
+INSERT INTO `user_password` VALUES (19, 'xMpCOKC5I4INzFCab3WEmw==', 0);
+INSERT INTO `user_password` VALUES (20, 'xMpCOKC5I4INzFCab3WEmw==', 0);
+INSERT INTO `user_password` VALUES (21, 'ICy5YqxZB1uWSwcVLSNLcA==', 0);
+INSERT INTO `user_password` VALUES (22, 'xMpCOKC5I4INzFCab3WEmw==', 52);
+INSERT INTO `user_password` VALUES (23, 'xMpCOKC5I4INzFCab3WEmw==', 53);
+INSERT INTO `user_password` VALUES (24, 'xMpCOKC5I4INzFCab3WEmw==', 55);
+
+SET FOREIGN_KEY_CHECKS = 1;
+```
+
+
+
+## 2. MyBatis-Plus代码生成
+
+### 2.1 数据源配置
+
+修改`application.yml`文件：
+
+```yaml
+spring:
+  # 数据库连接配置
+  datasource:
+    url: jdbc:mysql://localhost:3306/imooc_miaosha?serverTimezone=Asia/Shanghai
+    username: root
+    password: root
+    type: com.zaxxer.hikari.HikariDataSource
+  # 开发插件
+  devtools:
+    livereload:
+      enabled: true
+    restart:
+      enabled: true
+
+# mybatis配置
+mybatis-plus:
+  global-config:
+    db-config:
+      id-type: auto
+      logic-not-delete-value: 0
+      logic-delete-value: 1
+  configuration:
+    map-underscore-to-camel-case: true
+  mapper-locations: classpath:/mapper/**/*.xml
+
+```
+
+### 2.2 使用代码生成器
+
+在`src/test/java`任意子目录创建类：
+
+```java
+public class MyBatisPlusCodeGenerator {
+
+    /**
+     * <p>
+     * 读取控制台内容
+     * </p>
+     */
+    public static String scanner(String tip) {
+        Scanner scanner = new Scanner(System.in);
+        System.out.println("请输入" + tip + "：");
+        if (scanner.hasNext()) {
+            String ipt = scanner.next();
+            if (!StringUtils.isBlank(ipt)) {
+                return ipt;
+            }
+        }
+        throw new MybatisPlusException("请输入正确的" + tip + "！");
+    }
+
+    public static void main(String[] args) {
+        // 代码生成器
+        AutoGenerator mpg = new AutoGenerator();
+
+        // 全局配置
+        GlobalConfig gc = new GlobalConfig();
+        String projectPath = System.getProperty("user.dir");
+        gc.setOutputDir(projectPath + "/src/main/java");
+        gc.setAuthor("hundanli");
+        gc.setOpen(false);
+        // gc.setSwagger2(true); 实体属性 Swagger2 注解
+        mpg.setGlobalConfig(gc);
+
+        // 数据源配置
+        DataSourceConfig dsc = new DataSourceConfig();
+        dsc.setUrl("jdbc:mysql://localhost:3306/imooc_miaosha?serverTimezone=Asia/Shanghai&useUnicode=true&useSSL=false&characterEncoding=utf8");
+        // dsc.setSchemaName("public");
+        dsc.setDriverName("com.mysql.cj.jdbc.Driver");
+        dsc.setUsername("root");
+        dsc.setPassword("root");
+        mpg.setDataSource(dsc);
+
+        // 包配置
+        PackageConfig pc = new PackageConfig();
+        pc.setModuleName(scanner("模块名"));
+        pc.setParent("com.tcl.imooc.miaosha");
+        mpg.setPackageInfo(pc);
+
+        // 自定义配置
+        InjectionConfig cfg = new InjectionConfig() {
+            @Override
+            public void initMap() {
+                // to do nothing
+            }
+        };
+
+        // 如果模板引擎是 velocity
+        String templatePath = "/templates/mapper.xml.vm";
+
+        // 自定义输出配置
+        List<FileOutConfig> focList = new ArrayList<>();
+        // 自定义配置会被优先输出
+        focList.add(new FileOutConfig(templatePath) {
+            @Override
+            public String outputFile(TableInfo tableInfo) {
+                // 自定义输出文件名 ， 如果你 Entity 设置了前后缀、此处注意 xml 的名称会跟着发生变化！！
+                return projectPath + "/src/main/resources/mapper/" + pc.getModuleName()
+                        + "/" + tableInfo.getEntityName() + "Mapper" + StringPool.DOT_XML;
+            }
+        });
+
+        cfg.setFileOutConfigList(focList);
+        mpg.setCfg(cfg);
+
+        // 配置模板
+        TemplateConfig templateConfig = new TemplateConfig();
+
+        // 配置自定义输出模板，可以使用默认
+        //指定自定义模板路径，注意不要带上.ftl/.vm, 会根据使用的模板引擎自动识别
+        templateConfig.setEntity("templates/entity.java");
+        templateConfig.setService("templates/service.java");
+        templateConfig.setController("templates/controller.java");
+        templateConfig.setServiceImpl("templates/serviceImpl.java");
+        templateConfig.setXml("templates/mapper.xml");
+        templateConfig.setMapper("templates/mapper.java");
+
+
+        templateConfig.setXml(null);
+        mpg.setTemplate(templateConfig);
+
+        // 策略配置
+        StrategyConfig strategy = new StrategyConfig();
+        strategy.setNaming(NamingStrategy.underline_to_camel);
+        strategy.setColumnNaming(NamingStrategy.underline_to_camel);
+//        strategy.setSuperEntityClass("你自己的父类实体,没有就不用设置!");
+        strategy.setEntityLombokModel(true);
+        strategy.setRestControllerStyle(true);
+        // 公共父类
+//        strategy.setSuperControllerClass("你自己的父类控制器,没有就不用设置!");
+        // 写于父类中的公共字段
+//        strategy.setSuperEntityColumns("id");
+        strategy.setInclude(scanner("表名，多个英文逗号分割").split(","));
+        strategy.setControllerMappingHyphenStyle(true);
+//        strategy.setTablePrefix(pc.getModuleName() + "_");
+        mpg.setStrategy(strategy);
+        mpg.setTemplateEngine(new VelocityTemplateEngine());
+        mpg.execute();
+    }
+}
+```
+
+执行`main`方法按提示输入模块名"user"和两个表名"user_info,user_password"。执行完成后即可看到生成了user模块的controller，service，mapper，xml以及entity层的代码，然后稍微对service层的继承关系做修改即可。另外需要做的事情是
+
+- 在mapper层添加`@Repository`注解，如：
+
+  ```java
+  @Repository
+  public interface UserInfoMapper extends BaseMapper<UserInfo> {
+  
+  }
+  ```
+
+- 主启动类添加`@MapperScan`注解
+
+  ```java
+  @SpringBootApplication
+  @MapperScan(basePackages = "com.tcl.imooc.miaosha.*.mapper")
+  public class MiaoshaApplication {
+      ...
+  }
+  ```
+
+  
+
+### 2.3 编写查询测试
+
+#### 1. service
+
+```java
+@Service
+public class UserInfoServiceImpl implements IUserInfoService {
+
+    @Autowired
+    UserInfoMapper mapper;
+
+    @Override
+    public UserInfo getById(Integer id) {
+        return mapper.selectById(id);
+    }
+
+}
+```
+
+#### 2. controller
+
+```java
+@RestController
+@RequestMapping("/user/user-info")
+public class UserInfoController {
+
+    @Autowired
+    IUserInfoService service;
+
+    @GetMapping("")
+    public UserInfo queryById(@RequestParam(name = "id") Integer id) {
+        return service.getById(id);
+    }
+
+}
+```
+
+#### 3. API测试
+
+程序启动后，可以使用IDEA的Rest API工具进行测试。首先在`src/test/resources/`目录下创建test.http文件，编写下列内容：
+
+```http
+###
+GET http://localhost:8080/user/user-info?id=40
+```
+
+点击左边绿色的三角按钮即可运行测试。
+
+
+
+## 3. 通用类设计
+
+创建`common`包
+
+### 3.1 返回类型
+
+```java
+@Data
+public class Result {
+
+    /**
+     *  若status=success，则data内返回前端需要的json数据
+     *  若status=fail，则data内使用通用的错误码格式
+     */
+    private Object data;
+    /**
+     * 表明对应请求的返回处理结果“success”或“fail”
+     */
+    private String status;
+
+    public static Result success(Object data) {
+        return new Result(data, "success");
+    }
+
+    public static Result fail(Object data) {
+        return new Result(data, "fail");
+    }
+
+    public Result() {
+    }
+
+    public Result(Object data, String status) {
+        this.data = data;
+        this.status = status;
+    }
+
+}
+```
+
+### 3.2 错误信息类
+
+#### 1. 定义错误接口类
+
+```java
+public interface Error {
+
+    /** 错误码
+     * @return int
+     */
+    int getErrorCode();
+
+    /** 错误信息
+     * @return String
+     */
+    String getErrorMsg();
+
+    /** 设置信息
+     * @param msg String
+     */
+    Error setErrorMsg(String msg);
+}
+```
+
+
+
+#### 2. 定义错误信息枚举类
+
+```java
+public enum ErrorEnum implements Error {
+    /**
+     * 枚举实例
+     */
+    DATA_INVALID(100001, "参数不合法"),
+    DATA_NOT_EXIST(400001, "数据不存在"),
+    UNKNOWN_ERROR(500000, "未知错误")
+    ;
+
+    @Override
+    public int getErrorCode() {
+        return errorCode;
+    }
+
+    @Override
+    public String getErrorMsg() {
+        return errorMsg;
+    }
+
+    @Override
+    public Error setErrorMsg(String msg) {
+        this.errorMsg = errorMsg;
+        return this;
+    }
+
+    private final int errorCode;
+    private String errorMsg;
+
+    ErrorEnum(int errorCode, String errorMsg) {
+        this.errorCode = errorCode;
+        this.errorMsg = errorMsg;
+    }
+}
+
+```
+
+
+
+#### 3. 定义业务异常类
+
+这里使用包装器模式，将`Error`对象转为`BusinessException`。
+
+```java
+public class BusinessException extends Exception implements Error{
+
+    private final Error error;
+
+    /**
+     * @param error 包装通用错误类构造异常实例
+     */
+    public BusinessException(Error error) {
+        super();
+        this.error = error;
+    }
+
+    public BusinessException(Error error, String msg) {
+        super();
+        this.error = error;
+        this.setErrorMsg(msg);
+    }
+
+
+    @Override
+    public int getErrorCode() {
+        return error.getErrorCode();
+    }
+
+    @Override
+    public String getErrorMsg() {
+        return error.getErrorMsg();
+    }
+
+    @Override
+    public Error setErrorMsg(String msg) {
+        this.error.setErrorMsg(msg);
+        return this;
+    }
+}
+```
+
+
+
+### 3.3 全局异常处理
+
+使用Spring MVC的`@ControllerAdvice`捕捉异常和进行处理。
+
+```java
+@Slf4j
+@ControllerAdvice
+public class GlobalExceptionHandler {
+
+    @ResponseBody
+    @ExceptionHandler(Exception.class)
+    public Result handleException(Exception e) {
+        log.error("业务调用抛出异常: ", e.getCause());
+        HashMap<String, Object> data = new HashMap<>(2);
+        if (e instanceof BusinessException) {
+            BusinessException businessException = (BusinessException) e;
+            data.put("errorCode", businessException.getErrorCode());
+            data.put("errorMsg", businessException.getErrorMsg());
+        } else {
+            data.put("errorCode", ErrorEnum.UNKNOWN_ERROR.getErrorCode());
+            data.put("errorMsg", ErrorEnum.UNKNOWN_ERROR.getErrorMsg());
+        }
+        return Result.fail(data);
+    }
+
+}
+```
+
+### 3.4 重写Controller
+
+将返回类型统一为前面定义的`Result`，以及显示抛出异常。
+
+```java
+    @GetMapping("")
+    public Result queryById(@RequestParam(name = "id") Integer id) throws BusinessException{
+        UserInfo userInfo = service.getById(id);
+        if (userInfo == null) {
+            throw new BusinessException(ErrorEnum.DATA_NOT_EXIST);
+        }
+        return Result.success(userInfo);
+    }
+```
+
+
+
+## 4. 用户管理模块
+
+### 4.1 OTP验证码
+
+术语解析：**一次性密码**（英语：one-time password，简称**OTP**），又称动态密码或单次有效密码，是指电脑系统或其他数字设备上只能使用一次的密码，有效期为只有一次登录会话或交易。[概念来源](https://zh.wikipedia.org/wiki/%E4%B8%80%E6%AC%A1%E6%80%A7%E5%AF%86%E7%A2%BC)
+
+#### 4.1.1 Controller API
+
+```java
+    @GetMapping("/otp")
+    public Result getOtp(@RequestParam(name = "telephone") String telephone) {
+        int otp = ThreadLocalRandom.current().nextInt(100000, 1000_000);
+        String otpCode = String.valueOf(otp);
+        request.getSession().setAttribute(telephone, otpCode);
+        // 将OTP验证码同对应用户的手机号关联，使用httpSession的方式绑定手机号与OTPCDOE
+        log.error("{} ==>{}", telephone, otpCode);
+        return Result.success(null);
+    }
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
