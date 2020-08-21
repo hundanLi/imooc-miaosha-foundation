@@ -4,16 +4,18 @@ package com.tcl.imooc.miaosha.user.controller;
 import com.tcl.imooc.miaosha.common.error.BusinessException;
 import com.tcl.imooc.miaosha.common.error.ErrorEnum;
 import com.tcl.imooc.miaosha.common.response.Result;
-import com.tcl.imooc.miaosha.user.controller.vo.TelephoneVo;
+import com.tcl.imooc.miaosha.user.vo.RegisterVo;
+import com.tcl.imooc.miaosha.user.vo.TelephoneVo;
 import com.tcl.imooc.miaosha.user.entity.UserInfo;
 import com.tcl.imooc.miaosha.user.service.IUserInfoService;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.validation.Valid;
+import java.security.NoSuchAlgorithmException;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
@@ -25,16 +27,14 @@ import java.util.concurrent.ThreadLocalRandom;
  * @date  2020-08-21
  * @version 0.0.1
  */
-@CrossOrigin
+@CrossOrigin(allowCredentials = "true", allowedHeaders = "*")
 @Slf4j
 @RestController
-@RequestMapping("/user/user-info")
+@RequestMapping("/user")
 public class UserInfoController {
 
     @Autowired
     IUserInfoService service;
-
-
 
     @GetMapping("")
     public Result queryById(@RequestParam(name = "id") Integer id) throws BusinessException{
@@ -54,5 +54,18 @@ public class UserInfoController {
         log.error("{} ==> {}", telephone, otpCode);
         return Result.success(null);
     }
+
+    @PostMapping("/register")
+    public Result register(@RequestBody @Valid RegisterVo registerVo, HttpServletRequest request) throws BusinessException, NoSuchAlgorithmException {
+        String otpCode = registerVo.getOtpCode();
+        String sessionOtp = (String) request.getSession().getAttribute(registerVo.getTelephone());
+        if (!StringUtils.equals(otpCode, sessionOtp)) {
+            throw new BusinessException(ErrorEnum.DATA_INVALID, ErrorEnum.DATA_INVALID.getErrorMsg());
+        }
+        service.register(registerVo);
+
+        return Result.success(null);
+    }
+
 }
 

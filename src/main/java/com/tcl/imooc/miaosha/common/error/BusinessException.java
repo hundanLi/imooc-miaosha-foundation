@@ -11,6 +11,11 @@ public class BusinessException extends Exception implements Error{
 
     private final Error error;
 
+
+    public BusinessException() {
+        this.error = ErrorEnum.UNKNOWN_ERROR;
+    }
+
     /**
      * @param error 包装通用错误类构造异常实例
      */

@@ -663,17 +663,104 @@ public class GlobalExceptionHandler {
 
 #### 4.1.1 Controller API
 
+在controller包下新建子包vo，创建类：
+
 ```java
-    @GetMapping("/otp")
-    public Result getOtp(@RequestParam(name = "telephone") String telephone) {
+@Data
+public class TelephoneVo {
+
+    @NotBlank
+    private String telephone;
+}
+```
+
+Controller方法：
+
+```java
+    @PostMapping(value = "/getotp")
+    public Result getOtp(@RequestBody @Valid TelephoneVo telephone, HttpServletRequest request) {
         int otp = ThreadLocalRandom.current().nextInt(100000, 1000_000);
         String otpCode = String.valueOf(otp);
-        request.getSession().setAttribute(telephone, otpCode);
+        request.getSession().setAttribute(telephone.getTelephone(), otpCode);
         // 将OTP验证码同对应用户的手机号关联，使用httpSession的方式绑定手机号与OTPCDOE
-        log.error("{} ==>{}", telephone, otpCode);
+        log.error("{} ==> {}", telephone, otpCode);
         return Result.success(null);
     }
 ```
+
+为了允许跨域，在Controller类上添加注解：`@CrossOrigin`
+
+#### 4.1.2 页面开发和美化
+
+页面美化使用了基于bootstrap的metronic样式模板。
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>获取验证码</title>
+    <link href="asserts/css/bootstrap.min.css" rel="stylesheet" type="text/css"/>
+    <link href="asserts/css/components.css" rel="stylesheet" type="text/css"/>
+    <link href="asserts/css/login.css" rel="stylesheet" type="text/css"/>
+</head>
+<body class="login">
+<div class="content">
+    <h3 class="form-title">手机验证</h3>
+    <div class="form-group">
+        <label class="control-label">手机号</label>
+        <div>
+            <label for="telephone">
+                <input class="form-control" type="text" placeholder="手机号" name="telephone" id="telephone"/>
+            </label>
+        </div>
+    </div>
+    <div class="form-actions">
+        <button class="btn blue" id="getotp" type="submit">
+            获取验证码
+        </button>
+    </div>
+</div>
+
+
+<script src="https://cdn.staticfile.org/jquery/1.11.0/jquery.min.js"></script>
+<script>
+    $(document).ready(function () {
+        $("#getotp").click(function () {
+            let telephone = $("#telephone").val();
+            console.log(telephone);
+
+            if (telephone === null || telephone.trim() === "") {
+                alert("请填写手机号!")
+                return false;
+            }
+
+            let data = {"telephone": telephone};
+            data = JSON.stringify(data);
+
+            $.ajax({
+                url: "http://localhost:8080/user/user-info/getotp",
+                method: "POST",
+                contentType: "application/json",
+                data: data,
+                success: function (data) {
+                    if (data.status === "success") {
+                        alert("验证码发送成功，请查收！");
+                    } else {
+                        alert("验证码发送失败，请稍后重试！");
+                    }
+                }
+            });
+
+        });
+
+    });
+</script>
+</body>
+</html>
+```
+
+### 4.2 用户注册
 
 
 

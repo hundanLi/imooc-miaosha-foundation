@@ -1,4 +1,4 @@
-package com.tcl.imooc.miaosha.user.controller.vo;
+package com.tcl.imooc.miaosha.user.vo;
 
 import lombok.Data;
 
