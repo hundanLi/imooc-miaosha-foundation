@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseBody;
 
+import java.util.Arrays;
 import java.util.HashMap;
 
 /**
@@ -22,7 +23,7 @@ public class GlobalExceptionHandler {
     @ResponseBody
     @ExceptionHandler(Exception.class)
     public Result handleException(Exception e) {
-        log.error("业务调用抛出异常: ", e.getCause());
+        log.error("业务调用抛出异常: {}", e.getMessage());
         HashMap<String, Object> data = new HashMap<>(2);
         if (e instanceof BusinessException) {
             BusinessException businessException = (BusinessException) e;
@@ -31,6 +32,7 @@ public class GlobalExceptionHandler {
         } else {
             data.put("errorCode", ErrorEnum.UNKNOWN_ERROR.getErrorCode());
             data.put("errorMsg", ErrorEnum.UNKNOWN_ERROR.getErrorMsg());
+            data.put("data", e.getMessage());
         }
         return Result.fail(data);
     }

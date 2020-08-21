@@ -1,18 +1,18 @@
 spring:
-  # Êı¾İ¿âÁ¬½ÓÅäÖÃ
+  # æ•°æ®åº“è¿æ¥é…ç½®
   datasource:
     url: jdbc:mysql://localhost:3306/imooc_miaosha?serverTimezone=Asia/Shanghai
     username: root
     password: root
     type: com.zaxxer.hikari.HikariDataSource
-  # ¿ª·¢²å¼ş
+  # å¼€å‘æ’ä»¶
   devtools:
     livereload:
       enabled: true
     restart:
       enabled: true
 
-# mybatisÅäÖÃ
+# mybatisé…ç½®
 mybatis-plus:
   global-config:
     db-config:

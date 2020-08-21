@@ -6,4 +6,9 @@ GET http://localhost:8080/user/user-info?id=40
 
 
 ###
-GET http://localhost:8080/user/user-info/otp?telephone=110
+POST http://localhost:8080/user/user-info/getotp
+Content-Type: application/json
+
+{
+  "telephone": 111
+}
