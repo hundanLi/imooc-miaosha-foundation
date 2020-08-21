@@ -137,11 +137,11 @@ CREATE TABLE `user_info`  (
   `name` varchar(64) CHARACTER SET utf8 COLLATE utf8_bin NOT NULL DEFAULT '',
   `gender` tinyint(2) NOT NULL DEFAULT 0 COMMENT '1代表男性\r\n',
   `age` int(11) NOT NULL DEFAULT 0,
-  `telphone` varchar(64) CHARACTER SET utf8 COLLATE utf8_bin NOT NULL DEFAULT '',
-  `regisit_mode` varchar(64) CHARACTER SET utf8 COLLATE utf8_bin NOT NULL DEFAULT '' COMMENT '//byphone,bywechat,byalipay,',
+  `telephone` varchar(64) CHARACTER SET utf8 COLLATE utf8_bin NOT NULL DEFAULT '',
+  `register_mode` varchar(64) CHARACTER SET utf8 COLLATE utf8_bin NOT NULL DEFAULT '' COMMENT '//byphone,bywechat,byalipay,',
   `third_party_id` int(64) NOT NULL DEFAULT 0,
   PRIMARY KEY (`id`) USING BTREE,
-  UNIQUE INDEX `telphone_unique_index`(`telphone`) USING BTREE
+  UNIQUE INDEX `telephone_unique_index`(`telephone`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 56 CHARACTER SET = utf8 COLLATE = utf8_bin ROW_FORMAT = Compact;
 
 -- ----------------------------
@@ -158,7 +158,7 @@ INSERT INTO `user_info` VALUES (55, '1', 1, 1, '111', 'byphone', 0);
 DROP TABLE IF EXISTS `user_password`;
 CREATE TABLE `user_password`  (
   `id` int(11) NOT NULL AUTO_INCREMENT,
-  `encrpt_password` varchar(128) CHARACTER SET utf8 COLLATE utf8_bin NOT NULL DEFAULT '',
+  `encrypt_password` varchar(128) CHARACTER SET utf8 COLLATE utf8_bin NOT NULL DEFAULT '',
   `user_id` int(11) NOT NULL DEFAULT 0,
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `use_id`(`user_id`) USING BTREE

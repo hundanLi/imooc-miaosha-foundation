@@ -1,1 +1,25 @@
+spring:
+  # 数据库连接配置
+  datasource:
+    url: jdbc:mysql://localhost:3306/imooc_miaosha?serverTimezone=Asia/Shanghai
+    username: root
+    password: root
+    type: com.zaxxer.hikari.HikariDataSource
+  # 开发插件
+  devtools:
+    livereload:
+      enabled: true
+    restart:
+      enabled: true
 
+# mybatis配置
+mybatis:
+  mapper-locations: classpath:/mapper/*.xml
+mybatis-plus:
+  global-config:
+    db-config:
+      id-type: auto
+      logic-not-delete-value: 0
+      logic-delete-value: 1
+  configuration:
+    map-underscore-to-camel-case: true
