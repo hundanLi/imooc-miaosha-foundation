@@ -19,7 +19,7 @@ public interface Error {
     String getErrorMsg();
 
     /** 设置信息
-     * @param msg String
+     * @param errorMsg String
      */
-    Error setErrorMsg(String msg);
+    Error setErrorMsg(String errorMsg);
 }

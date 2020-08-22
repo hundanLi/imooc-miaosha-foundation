@@ -1,6 +1,5 @@
 package com.tcl.imooc.miaosha.common.handler;
 
-import com.fasterxml.jackson.databind.exc.InvalidFormatException;
 import com.tcl.imooc.miaosha.common.error.BusinessException;
 import com.tcl.imooc.miaosha.common.error.ErrorEnum;
 import com.tcl.imooc.miaosha.common.response.Result;
@@ -12,7 +11,6 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseBody;
 
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.function.Consumer;
 
@@ -29,7 +27,7 @@ public class GlobalExceptionHandler {
     @ResponseBody
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public Result handleException(MethodArgumentNotValidException e) {
-        log.error("业务调用抛出异常: {}", e.getMessage());
+        log.error("参数校验错误: {}", e.getMessage());
         HashMap<String, Object> data = new HashMap<>(2);
         e.getBindingResult().getFieldErrors().forEach(new Consumer<FieldError>() {
             @Override
@@ -43,7 +41,7 @@ public class GlobalExceptionHandler {
     @ResponseBody
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public Result handleException(HttpMessageNotReadableException e) {
-        log.error("业务调用抛出异常: {}", e.getMessage());
+        log.error("参数转换错误: {}", e.getMessage());
         HashMap<String, Object> data = new HashMap<>(2);
         data.put("errorCode", ErrorEnum.DATA_INVALID.getErrorCode());
         data.put("errorMsg", ErrorEnum.DATA_INVALID.getErrorMsg());
@@ -56,8 +54,8 @@ public class GlobalExceptionHandler {
     public Result handleException(Exception e) {
         HashMap<String, Object> data = new HashMap<>(2);
         if (e instanceof BusinessException) {
-            log.error("业务调用抛出异常: {}", e.getMessage());
             BusinessException businessException = (BusinessException) e;
+            log.error("业务调用异常: {}", ((BusinessException) e).getErrorMsg());
             data.put("errorCode", businessException.getErrorCode());
             data.put("errorMsg", businessException.getErrorMsg());
         } else {

@@ -661,7 +661,7 @@ public class GlobalExceptionHandler {
 
 术语解析：**一次性密码**（英语：one-time password，简称**OTP**），又称动态密码或单次有效密码，是指电脑系统或其他数字设备上只能使用一次的密码，有效期为只有一次登录会话或交易。[概念来源](https://zh.wikipedia.org/wiki/%E4%B8%80%E6%AC%A1%E6%80%A7%E5%AF%86%E7%A2%BC)
 
-#### 4.1.1 Controller API
+#### 4.1.1 后台逻辑
 
 在controller包下新建子包vo，创建类：
 
@@ -762,7 +762,282 @@ Controller方法：
 
 ### 4.2 用户注册
 
+#### 4.2.1 后台逻辑
 
+RegisterVo：
+
+```java
+@Data
+public class RegisterVo {
+    @NotBlank(message = "用户名不能为空！")
+    private String name;
+    @NotNull(message = "性别不能为空！")
+    @Min(value = 0)
+    private Integer gender;
+    @NotNull(message = "年龄不能为空！")
+    @Min(0)
+    private Integer age;
+    @NotBlank(message = "手机号码不能为空！")
+    private String telephone;
+    @NotBlank(message = "登录方式不能为空！")
+    private String registerMode;
+    @NotBlank(message = "验证码不能为空！")
+    private String otpCode;
+
+    @NotBlank(message = "密码不能为空！")
+    private String password;
+}
+```
+
+Controller：
+
+```java
+    @PostMapping("/register")
+    public Result register(@RequestBody @Valid RegisterVo registerVo, HttpServletRequest request) throws BusinessException, NoSuchAlgorithmException {
+        String otpCode = registerVo.getOtpCode();
+        String sessionOtp = (String) request.getSession().getAttribute(registerVo.getTelephone());
+        if (!StringUtils.equals(otpCode, sessionOtp)) {
+            throw new BusinessException(ErrorEnum.DATA_INVALID, ErrorEnum.DATA_INVALID.getErrorMsg());
+        }
+        service.register(registerVo);
+
+        return Result.success(null);
+    }
+```
+
+Service：
+
+```java
+    @Override
+    @Transactional(rollbackFor = BusinessException.class)
+    public void register(RegisterVo registerVo) throws NoSuchAlgorithmException, BusinessException {
+        // 1.保存用户信息
+        UserInfo userInfo = new UserInfo();
+        BeanUtils.copyProperties(registerVo, userInfo);
+        try {
+            userInfoMapper.insert(userInfo);
+        } catch (DuplicateKeyException e) {
+            throw new BusinessException(ErrorEnum.DATA_INVALID.setErrorMsg("手机号码已经被注册"));
+        }
+
+        // 2.密码加密+保存
+        UserPassword userPassword = new UserPassword();
+        userPassword.setUserId(userInfo.getId());
+        userPassword.setEncryptPassword(encryptPassword(registerVo.getPassword()));
+        userPasswordMapper.insert(userPassword);
+
+    }
+
+    private String encryptPassword(String password) throws NoSuchAlgorithmException {
+        MessageDigest digest = MessageDigest.getInstance("SHA-256");
+        BASE64Encoder encoder = new BASE64Encoder();
+        return encoder.encode(digest.digest(password.getBytes()));
+    }
+```
+
+此外，还可以在全局异常处理类中添加一个方法，用于捕捉参数类型转换的异常：
+
+```java
+    @ResponseBody
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public Result handleException(HttpMessageNotReadableException e) {
+        log.error("业务调用抛出异常: {}", e.getMessage());
+        HashMap<String, Object> data = new HashMap<>(2);
+        data.put("errorCode", ErrorEnum.DATA_INVALID.getErrorCode());
+        data.put("errorMsg", ErrorEnum.DATA_INVALID.getErrorMsg());
+        return Result.fail(data);
+    }
+```
+
+
+
+#### 4.2.2 页面开发
+
+在`resources/static`目录下新建`register.html`：
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>用户注册</title>
+    <script src="https://cdn.staticfile.org/jquery/1.11.0/jquery.min.js"></script>
+    <link href="asserts/css/bootstrap.min.css" rel="stylesheet" type="text/css"/>
+    <link href="asserts/css/components.css" rel="stylesheet" type="text/css"/>
+    <link href="asserts/css/login.css" rel="stylesheet" type="text/css"/>
+</head>
+<body class="login">
+<div class="content">
+    <h3 class="form-title">用户注册</h3>
+    <div class="form-group">
+        <label class="control-label">手机号</label>
+        <div>
+            <input class="form-control" type="text" placeholder="手机号" name="telephone" id="telephone"/>
+        </div>
+    </div>
+    <div class="form-group">
+        <label class="control-label">验证码</label>
+        <div>
+            <input class="form-control" type="text" placeholder="验证码" name="otpCode" id="otpCode"/>
+        </div>
+    </div>
+    <div class="form-group">
+        <label class="control-label">用户昵称</label>
+        <div>
+            <input class="form-control" type="text" placeholder="用户昵称" name="name" id="name"/>
+        </div>
+    </div>
+    <div class="form-group">
+        <label class="control-label">性别</label>
+        <div class="form-control">
+            <label for="male">男</label><input type="radio" value="1" name="gender" id="male"/>
+            <label for="female">女</label><input type="radio" value="0" name="gender" id="female"/>
+        </div>
+    </div>
+    <div class="form-group">
+        <label class="control-label">年龄</label>
+        <div>
+            <input class="form-control" type="text" placeholder="年龄" name="age" id="age"/>
+        </div>
+    </div>
+    <div class="form-group">
+        <label class="control-label">密码</label>
+        <div>
+            <input class="form-control" type="password" placeholder="密码" name="password" id="password"/>
+        </div>
+    </div>
+    <div class="form-actions">
+        <button class="btn blue" id="register" type="submit">
+            注册
+        </button>
+    </div>
+</div>
+
+<script>
+    jQuery(document).ready(function () {
+
+        //绑定otp的click事件用于向后端发送获取手机验证码的请求
+        $("#register").on("click", function () {
+
+            let telephone = $("#telephone").val();
+            let otpCode = $("#otpCode").val();
+            let password = $("#password").val();
+            let age = $("#age").val();
+            let gender = $('input[name="gender"]:checked').val();
+            let name = $("#name").val();
+            if (telephone == null || telephone === "") {
+                alert("手机号不能为空");
+                return false;
+            }
+            if (otpCode == null || otpCode === "") {
+                alert("验证码不能为空");
+                return false;
+            }
+            if (name == null || name === "") {
+                alert("用户名不能为空");
+                return false;
+            }
+            if (gender == null || gender === "") {
+                alert("性别不能为空");
+                return false;
+            }
+            if (age == null || age === "") {
+                alert("年龄不能为空");
+                return false;
+            }
+            if (password == null || password === "") {
+                alert("密码不能为空");
+                return false;
+            }
+
+            //映射到后端@RequestMapping(value = "/register", method = {RequestMethod.POST}})
+            $.ajax({
+                type: "POST",
+                contentType: "application/json",
+                url: "http://localhost:8080/user/register",
+                data: JSON.stringify({
+                    "telephone": telephone,
+                    "otpCode": otpCode,
+                    "password": password,
+                    "age": age,
+                    "gender": gender,
+                    "name": name,
+                    "registerMode": "byphone"
+                }),
+                //允许跨域请求
+                xhrFields: {withCredentials: true},
+
+                success: function (data) {
+                    if (data.status === "success") {
+                        alert("注册成功");
+                    } else {
+                        alert("注册失败：" + data.data.errorMsg);
+                    }
+                },
+                error: function (data) {
+                    alert("注册失败：" + data.responseText);
+                }
+            });
+            return false;
+        });
+    });
+</script>
+</body>
+</html>
+```
+
+
+
+### 4.3 用户登录
+
+#### 4.3.1 后台逻辑
+
+新建LoginVo类，用于接收手机号和密码：
+
+```java
+@Data
+public class LoginVo {
+    @NotBlank
+    private String telephone;
+    @NotBlank
+    private String password;
+}
+```
+
+Controller：
+
+```java
+    @PostMapping("/login")
+    public Result login(@RequestBody @Valid LoginVo loginVo, HttpServletRequest request) throws NoSuchAlgorithmException, BusinessException {
+        UserInfo userInfo = service.login(loginVo);
+        request.getSession().setAttribute("IS_LOGIN", true);
+        request.getSession().setAttribute("LOGIN_USER", userInfo);
+        return Result.success("登录成功");
+    }
+```
+
+Service：
+
+```java
+    @Override
+    public UserInfo login(LoginVo loginVo) throws BusinessException, NoSuchAlgorithmException {
+        // 检查用户是否已经注册
+        LambdaQueryWrapper<UserInfo> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(UserInfo::getTelephone, loginVo.getTelephone());
+        UserInfo userInfo = userInfoMapper.selectOne(queryWrapper);
+        if (userInfo == null) {
+            throw new BusinessException(ErrorEnum.DATA_NOT_EXIST.setErrorMsg("该手机号码尚未注册！"));
+        }
+        // 校验密码是否正确
+        LambdaQueryWrapper<UserPassword> passwordWrapper = new LambdaQueryWrapper<>();
+        passwordWrapper.eq(UserPassword::getUserId, userInfo.getId());
+        passwordWrapper.eq(UserPassword::getEncryptPassword, encryptPassword(loginVo.getPassword()));
+        if (userPasswordMapper.selectCount(passwordWrapper) < 1) {
+            throw new BusinessException(ErrorEnum.PASSWORD_INCORRECT);
+        }
+        return userInfo;
+    }
+```
 
 
 

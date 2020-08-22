@@ -2,6 +2,7 @@ package com.tcl.imooc.miaosha.user.service;
 
 import com.tcl.imooc.miaosha.common.error.BusinessException;
 import com.tcl.imooc.miaosha.user.entity.UserInfo;
+import com.tcl.imooc.miaosha.user.vo.LoginVo;
 import com.tcl.imooc.miaosha.user.vo.RegisterVo;
 
 import java.security.NoSuchAlgorithmException;
@@ -28,4 +29,6 @@ public interface IUserInfoService {
      * @param registerVo vo
      */
     void register(RegisterVo registerVo) throws NoSuchAlgorithmException, BusinessException;
+
+    UserInfo login(LoginVo loginVo) throws BusinessException, NoSuchAlgorithmException;
 }

@@ -1,5 +1,6 @@
 package com.tcl.imooc.miaosha.user.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.tcl.imooc.miaosha.common.error.BusinessException;
 import com.tcl.imooc.miaosha.common.error.ErrorEnum;
 import com.tcl.imooc.miaosha.user.entity.UserInfo;
@@ -7,7 +8,9 @@ import com.tcl.imooc.miaosha.user.entity.UserPassword;
 import com.tcl.imooc.miaosha.user.mapper.UserInfoMapper;
 import com.tcl.imooc.miaosha.user.mapper.UserPasswordMapper;
 import com.tcl.imooc.miaosha.user.service.IUserInfoService;
+import com.tcl.imooc.miaosha.user.vo.LoginVo;
 import com.tcl.imooc.miaosha.user.vo.RegisterVo;
+import lombok.SneakyThrows;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DuplicateKeyException;
@@ -59,6 +62,25 @@ public class UserInfoServiceImpl implements IUserInfoService {
         userPassword.setEncryptPassword(encryptPassword(registerVo.getPassword()));
         userPasswordMapper.insert(userPassword);
 
+    }
+
+    @Override
+    public UserInfo login(LoginVo loginVo) throws BusinessException, NoSuchAlgorithmException {
+        // 检查用户是否已经注册
+        LambdaQueryWrapper<UserInfo> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(UserInfo::getTelephone, loginVo.getTelephone());
+        UserInfo userInfo = userInfoMapper.selectOne(queryWrapper);
+        if (userInfo == null) {
+            throw new BusinessException(ErrorEnum.DATA_NOT_EXIST.setErrorMsg("该手机号码尚未注册！"));
+        }
+        // 校验密码是否正确
+        LambdaQueryWrapper<UserPassword> passwordWrapper = new LambdaQueryWrapper<>();
+        passwordWrapper.eq(UserPassword::getUserId, userInfo.getId());
+        passwordWrapper.eq(UserPassword::getEncryptPassword, encryptPassword(loginVo.getPassword()));
+        if (userPasswordMapper.selectCount(passwordWrapper) < 1) {
+            throw new BusinessException(ErrorEnum.PASSWORD_INCORRECT);
+        }
+        return userInfo;
     }
 
     private String encryptPassword(String password) throws NoSuchAlgorithmException {

@@ -11,6 +11,7 @@ public enum ErrorEnum implements Error {
      */
     DATA_INVALID(100001, "参数不合法"),
     DATA_NOT_EXIST(400001, "数据不存在"),
+    PASSWORD_INCORRECT(400002, "输入密码错误"),
     UNKNOWN_ERROR(500000, "未知错误")
     ;
 
@@ -25,7 +26,7 @@ public enum ErrorEnum implements Error {
     }
 
     @Override
-    public Error setErrorMsg(String msg) {
+    public Error setErrorMsg(String errorMsg) {
         this.errorMsg = errorMsg;
         return this;
     }
