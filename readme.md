@@ -1039,7 +1039,475 @@ Service：
     }
 ```
 
+#### 4.3.2 页面开发
 
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>用户登录</title>
+    <script src="https://cdn.staticfile.org/jquery/1.11.0/jquery.min.js"></script>
+    <link href="asserts/css/bootstrap.min.css" rel="stylesheet" type="text/css"/>
+    <link href="asserts/css/components.css" rel="stylesheet" type="text/css"/>
+    <link href="asserts/css/login.css" rel="stylesheet" type="text/css"/>
+</head>
+<body class="login">
+<div class="content">
+    <h3 class="form-title">用户登录</h3>
+    <div class="form-group">
+        <label class="control-label" for="telephone">手机号</label>
+        <div>
+            <input class="form-control" type="text" placeholder="手机号" name="telephone" id="telephone"/>
+        </div>
+    </div>
+    <div class="form-group">
+        <label class="control-label" for="password">密码</label>
+        <div>
+            <input class="form-control" type="password" placeholder="密码" name="password" id="password"/>
+        </div>
+    </div>
+    <div class="form-actions">
+        <button class="btn blue" id="login" type="submit">
+            登录
+        </button>
+        <button class="btn green" id="register" type="submit">
+            注册
+        </button>
+    </div>
+</div>
+<script>
+    jQuery(document).ready(function () {
+
+        //绑定注册按钮的click事件用于跳转到注册页面
+        $("#register").on("click", function () {
+            window.location.href = "getotp.html";
+        });
+
+        //绑定登录按钮的click事件用于登录
+        $("#login").on("click", function () {
+
+            let telephone = $("#telephone").val();
+            let password = $("#password").val();
+            if (telephone == null || telephone.trim() === "") {
+                alert("手机号不能为空");
+                return false;
+            }
+            if (password == null || password.trim() === "") {
+                alert("密码不能为空");
+                return false;
+            }
+
+            //映射到后端@PostMapping(value = "/login")
+            $.ajax({
+                type: "POST",
+                contentType: "application/json",
+                url: "http://localhost:8080/user/login",
+                data: JSON.stringify({
+                    "telephone": telephone,
+                    "password": password
+                }),
+                //允许跨域请求
+                xhrFields: {withCredentials: true},
+                success: function (data) {
+                    if (data.status === "success") {
+                        alert("登录成功");
+                    } else {
+                        alert("登录失败：" + data.data.errorMsg);
+                    }
+                },
+                error: function (data) {
+                    alert("登录失败：" + data.responseText);
+                }
+            });
+            return false;
+        });
+    });
+</script>
+</body>
+</html>
+```
+
+
+
+## 5. 商品信息模块
+
+### 5.1 MyBatis Plus代码生成
+
+运行MyBatis-Plus代码生成器，模块名和数据表分别输入"item"以及"item,item_stock"，即可快速生成商品模块的controller，service，mapper和entity的代码。
+
+### 5.2 商品添加
+
+#### 5.2.1 后台接口
+
+ItemVo：
+
+```java
+@Data
+public class ItemVo {
+
+    private Integer id;
+    /**
+     * 名称
+     */
+    @NotBlank
+    private String title;
+
+    /**
+     * 库存
+     */
+    @Min(0)
+    @NotNull
+    private Integer stock;
+    /**
+     * 描述
+     */
+    @NotBlank
+    private String description;
+    /**
+     * 价格
+     */
+    @Min(0)
+    @NotNull
+    private BigDecimal price;
+    /**
+     * 销量
+     */
+    @Null
+    private Integer sales;
+    /**
+     * 图片
+     */
+    @NotBlank
+    private String imgUrl;
+}
+
+```
+
+Controller：
+
+```java
+    @PostMapping("/create")
+    public Result createItem(@RequestBody @Valid ItemVo itemVo) {
+        itemVo = service.createItem(itemVo);
+        return Result.success(itemVo);
+    }
+```
+
+Service：
+
+```java
+    @Override
+    public ItemVo createItem(ItemVo itemVo) {
+        Item item = new Item();
+        BeanUtils.copyProperties(itemVo, item);
+        itemMapper.insert(item);
+
+        ItemStock itemStock = new ItemStock();
+        itemStock.setItemId(item.getId());
+        itemStock.setStock(itemVo.getStock());
+        stockMapper.insert(itemStock);
+        itemVo.setId(item.getId());
+
+        return itemVo;
+    }
+```
+
+#### 5.2.2 页面开发
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>创建商品</title>
+    <script src="https://cdn.staticfile.org/jquery/1.11.0/jquery.min.js"></script>
+    <link href="asserts/css/bootstrap.min.css" rel="stylesheet" type="text/css"/>
+    <link href="asserts/css/components.css" rel="stylesheet" type="text/css"/>
+    <link href="asserts/css/login.css" rel="stylesheet" type="text/css"/>
+</head>
+<body class="login">
+<div class="content">
+    <h3 class="form-title">创建商品</h3>
+    <div class="form-group">
+        <label class="control-label" for="title">商品名</label>
+        <div>
+            <input class="form-control" type="text" name="title" id="title"/>
+        </div>
+    </div>
+    <div class="form-group">
+        <label class="control-label" for="description">商品描述</label>
+        <div>
+            <input class="form-control" type="text" name="description" id="description"/>
+        </div>
+    </div>
+    <div class="form-group">
+        <label class="control-label" for="price">价格</label>
+        <div>
+            <input class="form-control" type="number" step="any" name="price" id="price"/>
+        </div>
+    </div>
+    <div class="form-group">
+        <label class="control-label" for="imgUrl">图片</label>
+        <div>
+            <input class="form-control" type="text" name="imgUrl" id="imgUrl"/>
+        </div>
+    </div>
+    <div class="form-group">
+        <label class="control-label" for="stock">库存</label>
+        <div>
+            <input class="form-control" type="number" step="1" name="stock" id="stock"/>
+        </div>
+    </div>
+    <div class="form-actions">
+        <button class="btn blue" id="create" type="submit">
+            创建
+        </button>
+    </div>
+</div>
+
+</body>
+
+<script>
+    jQuery(document).ready(function () {
+
+        //绑定register按钮的click事件
+        $("#create").on("click", function () {
+
+            let title = $("#title").val().trim();
+            let description = $("#description").val().trim();
+            let price = $("#price").val().trim();
+            let imgUrl = $("#imgUrl").val().trim();
+            let stock = $("#stock").val().trim();
+
+            if (title == null || title === "") {
+                alert("商品名不能为空");
+                return false;
+            }
+            if (description == null || description === "") {
+                alert("商品描述不能为空");
+                return false;
+            }
+            if (price == null || price === "") {
+                alert("价格不能为空");
+                return false;
+            }
+            if (imgUrl == null || imgUrl === "") {
+                alert("图片不能为空");
+                return false;
+            }
+            if (stock == null || stock === "") {
+                alert("库存不能为空");
+                return false;
+            }
+
+            //映射到后端/create
+            $.ajax({
+                type: "POST",
+                contentType: "application/json",
+                url: "http://localhost:8080/item/create",
+                data: JSON.stringify({
+                    "title": title,
+                    "description": description,
+                    "price": price,
+                    "imgUrl": imgUrl,
+                    "stock": stock
+                }),
+                //允许跨域请求
+                xhrFields: {withCredentials: true},
+                success: function (data) {
+                    if (data.status === "success") {
+                        alert("创建成功");
+                    } else {
+                        alert("创建失败: " + data.data.errorMsg);
+                    }
+                },
+                error: function (data) {
+                    alert("创建失败: " + data.responseText);
+                }
+            });
+            return false;
+        });
+    });
+</script>
+</html>
+```
+
+### 5.3 商品列表
+
+#### 5.3.1 后台接口
+
+PageVo:
+
+```java
+@Data
+public class PageVo {
+    @Min(1)
+    @NotNull
+    Integer pageNum;
+    @Min(5)
+    @NotNull
+    Integer pageSize;
+}
+
+```
+
+Controller：
+
+```java
+    @PostMapping("/list")
+    public Result getItemList(@RequestBody @Valid PageVo pageVo) {
+        return Result.success(service.listItem(pageVo.getPageNum(), pageVo.getPageSize()));
+    }
+```
+
+Service：
+
+```java
+    @Override
+    public IPage<ItemVo> listItem(Integer pageNum, Integer pageSize) {
+        List<ItemVo> itemVos;
+        Page<Item> page = new Page<>(pageNum, pageSize);
+
+        LambdaQueryWrapper<Item> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.orderByDesc(Item::getSales);
+        Page<Item> items = itemMapper.selectPage(page, queryWrapper);
+
+        itemVos = items.getRecords().stream().map(new Function<Item, ItemVo>() {
+            @Override
+            public ItemVo apply(Item item) {
+                // 属性拷贝
+                ItemVo itemVo = new ItemVo();
+                BeanUtils.copyProperties(item, itemVo);
+
+                // 查询库存
+                LambdaQueryWrapper<ItemStock> queryWrapper = new LambdaQueryWrapper<>();
+                queryWrapper.eq(ItemStock::getItemId, item.getId());
+                ItemStock itemStock = stockMapper.selectOne(queryWrapper);
+                itemVo.setStock(itemStock.getStock());
+
+                return itemVo;
+            }
+        }).collect(Collectors.toList());
+
+        // 构造返回
+        Page<ItemVo> voPage = new Page<>();
+        voPage.setRecords(itemVos);
+        return voPage;
+    }
+
+```
+
+#### 5.3.2 页面开发
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>商品列表</title>
+    <script src="https://cdn.staticfile.org/jquery/1.11.0/jquery.min.js"></script>
+    <link href="asserts/css/bootstrap.min.css" rel="stylesheet" type="text/css"/>
+    <link href="asserts/css/components.css" rel="stylesheet" type="text/css"/>
+    <link href="asserts/css/login.css" rel="stylesheet" type="text/css"/>
+</head>
+<body>
+<div class="content">
+    <h3 class="form-title">商品列表</h3>
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+            <tr>
+                <th>商品名</th>
+                <th>商品图片</th>
+                <th>商品描述</th>
+                <th>商品价格</th>
+                <th>商品库存</th>
+                <th>商品销量</th>
+            </tr>
+            </thead>
+
+            <tbody id="container">
+
+            </tbody>
+        </table>
+    </div>
+</div>
+</body>
+
+<script>
+    // 定义全局商品数组信息
+    let g_itemList = [];
+    $(document).ready(function () {
+        $.ajax({
+            type: "POST",
+            contentType: "application/json;charset=utf8",
+            url: "http://localhost:8080/item/list",
+            data: JSON.stringify({
+                "pageNum": 1,
+                "pageSize": 10
+            }),
+            xhrFields: {
+                withCredentials: true,
+            },
+            success: function (data) {
+                if (data.status === "success") {
+                    g_itemList = data.data.records;
+                    reloadDom();
+                } else {
+                    alert("获取商品信息失败: " + data.data.errorMsg);
+                }
+            },
+            error: function (data) {
+                alert("获取商品信息失败: " + data.responseText);
+            }
+        });
+    });
+
+    function reloadDom() {
+        for (let i = 0; i < g_itemList.length; i++) {
+            let itemVO = g_itemList[i];
+            let dom =
+                "<tr data-id='" + itemVO.id + "' id='itemDetail" + itemVO.id + "'>\
+			<td>" + itemVO.title + "</td>\
+			<td><img style='width:100px;height:auto;' src='" + itemVO.imgUrl + "'/></td>\
+			<td>" + itemVO.description + "</td>\
+			<td>" + itemVO.price + "</td>\
+			<td>" + itemVO.stock + "</td>\
+			<td>" + itemVO.sales + "</td>\
+			</tr>";
+            $("#container").append($(dom));
+            //点击一行任意的位置 跳转到商品详情页
+            $("#itemDetail" + itemVO.id).on("click", function (e) {
+                window.location.href = "getitem.html?id=" + $(this).data("id");
+            });
+        }
+
+    }
+</script>
+
+</html>
+```
+
+### 5.4 商品详情
+
+类似，不再列出。查看完整代码。
+
+
+
+
+
+
+
+## 小结
+
+### 1. 应用分层设计
+
+建议首先根据产品需求文档设计出业务对象模型（Business Object Model），然后再设计出数据对象模型（Data Object Model）。各层的对象应该严格区分开来。但是有时候严格区分又会出现冗余设计。
+
+### 2. 数据库设计
+
+数据表设计时要考虑到业务层的需求和数据库的扩展性进行分表。
 
 
 
