@@ -1,9 +1,10 @@
 package com.tcl.imooc.miaosha.order.entity;
 
-import java.io.Serializable;
-
+import java.math.BigDecimal;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
+import java.time.LocalDateTime;
+import java.io.Serializable;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -18,16 +19,22 @@ import lombok.EqualsAndHashCode;
  */
 @Data
 @EqualsAndHashCode(callSuper = false)
-public class SequenceInfo implements Serializable {
+public class Promo implements Serializable {
 
     private static final long serialVersionUID=1L;
 
-    @TableId(type = IdType.INPUT)
-    private String name;
+    @TableId(value = "id", type = IdType.AUTO)
+    private Integer id;
 
-    private Integer currentValue;
+    private String promoName;
 
-    private Integer step;
+    private LocalDateTime startDate;
+
+    private LocalDateTime endDate;
+
+    private Integer itemId;
+
+    private BigDecimal promoItemPrice;
 
 
 }

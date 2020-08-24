@@ -56,15 +56,20 @@
         </div>
     </div>
     <div class="form-actions">
-        <button class="btn blue" id="createOrder" type="submit">
+        <button style="float:left;" class="btn blue" id="createOrder" type="submit">
             下单
         </button>
+        <div style="float: right;margin-right: 30px">
+            <label style="float: left; margin-right: 10px" for="amount">购买数量</label>
+            <input style="float: right;" type="number" value="1" step="1" min="1" max="3" name="amount" id="amount"/>
+        </div>
     </div>
 </div>
 </body>
 
 <script>
     let g_itemVO = {};
+    
     $(document).ready(function () {
         // 获取商品详情
         $.ajax({
@@ -91,14 +96,15 @@
         });
 
         $("#createOrder").on("click", function () {
+            let amount = $("#amount").val();
             $.ajax({
                 type: "POST",
                 url: "http://localhost:8080/order/createorder",
                 contentType: "application/json",
                 data: JSON.stringify({
                     "itemId": g_itemVO.id,
-                    "amount": 1, //暂时写死为一件
-                    "promoId": g_itemVO.promoId,
+                    "amount": amount,
+                    "promoId": g_itemVO.promoVo.id,
                 }),
                 xhrFields: {
                     withCredentials: true
@@ -128,25 +134,26 @@
         $("#price").text(g_itemVO.price);
         $("#stock").text(g_itemVO.stock);
         $("#sales").text(g_itemVO.sales);
-        if (g_itemVO.promoStatus === 1) {
+        let promoVo = g_itemVO.promoVo;
+        if (promoVo.status === 1) {
             // 秒杀活动还未开始
-            console.log(g_itemVO.startDate);
-            let startTime = g_itemVO.startDate.replace(new RegExp("-", "gm"), "/");
+            console.log(promoVo.startDate);
+            let startTime = promoVo.startDate.replace(new RegExp("-", "gm"), "/");
             startTime = (new Date(startTime)).getTime();
             let nowTime = Date.parse(new Date());
             let delta = (startTime - nowTime) / 1000;
             if (delta <= 0) {
                 // 活动开始了
-                g_itemVO.promoStatus = 2;
+                promoVo.status = 2;
                 reloadDom();
             }
-            $("#promoStartDate").text("秒杀活动将于：" + g_itemVO.startDate + " 开始售卖 倒计时：" + delta + "  秒");
-            $("#promoPrice").text(g_itemVO.promoPrice);
+            $("#promoStartDate").text("秒杀活动将于：" + promoVo.startDate + " 开始售卖 倒计时：" + delta + "  秒");
+            $("#promoPrice").text(promoVo.promoItemPrice);
             $("#createOrder").attr("disabled", true);
-        } else if (g_itemVO.promoStatus === 2) {
+        } else if (promoVo.status === 2) {
             // 秒杀活动进行中
             $("#promoStartDate").text("秒杀正在进行中");
-            $("#promoPrice").text(g_itemVO.promoPrice);
+            $("#promoPrice").text(promoVo.promoItemPrice);
             $("#createOrder").attr("disabled", false);
             $("#normalPriceContainer").hide();
         }
@@ -157,7 +164,7 @@
         if (this.location.search.indexOf("?") === 0 && this.location.search.indexOf("=") > 1) {
             let arrSource = unescape(this.location.search).substring(1, this.location.search.length).split("&"), i = 0;
             while (i < arrSource.length) {
-                if (arrSource[i].indexOf("=") > 0 && arrSource[i].split("=")[0].toLowerCase() === paramName.toLowerCase()){
+                if (arrSource[i].indexOf("=") > 0 && arrSource[i].split("=")[0].toLowerCase() === paramName.toLowerCase()) {
                     paramValue = arrSource[i].split("=")[1];
                     break;
                 }

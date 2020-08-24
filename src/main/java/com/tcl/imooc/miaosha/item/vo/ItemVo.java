@@ -1,5 +1,7 @@
 package com.tcl.imooc.miaosha.item.vo;
 
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.tcl.imooc.miaosha.order.vo.PromoVo;
 import lombok.Data;
 
 import javax.validation.constraints.Min;
@@ -52,4 +54,9 @@ public class ItemVo {
      */
     @NotBlank
     private String imgUrl;
+
+    /**
+     * 促销活动信息
+     */
+    private PromoVo promoVo;
 }

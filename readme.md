@@ -1528,7 +1528,7 @@ CREATE TABLE `sequence_info`  (
 
 与前面类似，使用MyBatis Plus生成器生成代码。
 
-**注意**：因为订单ID是自主生成，因此在`OrderInfo`类的id字段添加注解`@TableId(type = IdType.INPUT)`。
+**注意**：因为订单ID是自主生成，因此在`OrderInfo`类的id字段以及`SequenceInfo`的name字段添加注解`@TableId(type = IdType.INPUT)`。
 
 ### 6.2 交易下单
 
@@ -1587,7 +1587,7 @@ public class OrderVo {
 订单号生成：
 
 ```java
-/**
+    /**
      * @return 订单号
      */
     private String generateOrderId() {
@@ -1600,6 +1600,9 @@ public class OrderVo {
         // 中间6位是递增序列
         SequenceInfo sequenceInfo = sequenceInfoMapper.selectByName("order_info");
         Integer currentValue = sequenceInfo.getCurrentValue();
+        // 修改数据库流水号
+        sequenceInfo.setCurrentValue(currentValue + sequenceInfo.getStep());
+        sequenceInfoMapper.updateById(sequenceInfo);
         String mid = currentValue.toString();
         for (int i = 0; i < 6 - mid.length(); i++) {
             orderId.append('0');
@@ -1695,6 +1698,270 @@ public class OrderVo {
 ```
 
 
+
+## 7. 秒杀模块
+
+### 7.1 代码生成
+
+订单模型：
+
+```java
+@Data
+public class PromoVo {
+    private Integer id;
+
+    private String promoName;
+
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime startDate;
+
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime endDate;
+
+    private Integer itemId;
+
+    private BigDecimal promoItemPrice;
+
+
+    /**
+     * 促销活动状态：1表示未开始，2表示进行中，3表示已结束
+     */
+    private Integer status;
+}
+```
+
+数据库：
+
+```sql
+CREATE TABLE `promo`  (
+  `id` int(100) NOT NULL AUTO_INCREMENT,
+  `promo_name` varchar(255) CHARACTER SET utf8 COLLATE utf8_bin NOT NULL DEFAULT '',
+  `start_date` datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
+  `end_date` datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
+  `item_id` int(11) NOT NULL DEFAULT 0,
+  `promo_item_price` decimal(10, 2) NOT NULL DEFAULT 0.00,
+  PRIMARY KEY (`id`) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8 COLLATE = utf8_bin ROW_FORMAT = Compact;
+```
+
+运行代码生成器。
+
+
+
+### 7.2 促销与商品整合
+
+#### 1. 促销活动信息查询
+
+```java
+@Service
+public class PromoServiceImpl implements IPromoService {
+
+    @Autowired
+    PromoMapper mapper;
+
+    @Override
+    public PromoVo getPromoByItemId(Integer itemId) {
+        LambdaQueryWrapper<Promo> queryWrapper = new LambdaQueryWrapper<>();
+        Promo promo = mapper.selectOne(queryWrapper.eq(Promo::getItemId, itemId));
+        if (promo == null) {
+            return null;
+        }
+        PromoVo promoVo = new PromoVo();
+
+        BeanUtils.copyProperties(promo, promoVo);
+
+        // 设置促销活动状态
+        LocalDateTime now = LocalDateTime.now();
+        if (now.isAfter(promo.getEndDate())) {
+            promoVo.setStatus(3);
+        } else if (now.isAfter(promo.getStartDate())) {
+            promoVo.setStatus(2);
+        } else {
+            promoVo.setStatus(1);
+        }
+        return promoVo;
+    }
+}
+```
+
+#### 2. 商品信息查询修改
+
+ItemVo类增加PromoVo字段：
+
+```java
+    /**
+     * 促销活动信息
+     */
+    private PromoVo promoVo;
+```
+
+ItemService：
+
+```java
+    @Override
+    public ItemVo getItemById(Integer itemId) {
+        // 查询基本信息
+        ItemVo itemVo = new ItemVo();
+        Item item = itemMapper.selectById(itemId);
+        BeanUtils.copyProperties(item, itemVo);
+
+        // 查询库存信息
+        ItemStock itemStock = stockService.selectByItemId(itemId);
+        itemVo.setStock(itemStock.getStock());
+
+        // 查询促销信息
+        PromoVo promoVo = promoService.getPromoByItemId(itemId);
+        if (promoVo != null && promoVo.getStatus() < 3) {
+            itemVo.setPromoVo(promoVo);
+        }
+        return itemVo;
+    }
+```
+
+OrderService：
+
+```java
+    @Override
+    @Transactional(rollbackFor = BusinessException.class)
+    public OrderInfo createItem(OrderVo orderVo) throws BusinessException {
+        OrderInfo orderInfo = new OrderInfo();
+
+        // 判断用户是否，订单号是否合法
+        UserInfo userInfo = userInfoService.getById(orderVo.getUserId());
+        if (userInfo == null) {
+            throw new BusinessException(ErrorEnum.PARAMETER_INVALID.setErrorMsg("用户不存在！"));
+        }
+        ItemVo itemVo = itemService.getItemById(orderVo.getItemId());
+        if (itemVo == null) {
+            throw new BusinessException(ErrorEnum.PARAMETER_INVALID.setErrorMsg("商品不存在！"));
+        }
+        // 判断促销活动是否合法
+        if (orderVo.getPromoId() != null) {
+            PromoVo promoVo = promoService.getPromoByItemId(orderVo.getPromoId());
+            if (promoVo == null || !promoVo.getItemId().equals(itemVo.getId())) {
+                throw new BusinessException(ErrorEnum.PARAMETER_INVALID.setErrorMsg("活动信息不准确"));
+            } else if (promoVo.getStatus() != 2) {
+                throw new BusinessException(ErrorEnum.PARAMETER_INVALID.setErrorMsg("活动尚未开始"));
+            }
+            // 设置促销价格和订单促销id
+            itemVo.setPrice(promoVo.getPromoItemPrice());
+            orderInfo.setPromoId(promoVo.getId());
+
+        }
+
+        // 商品减库存
+        itemService.decreaseStock(orderVo.getItemId(), orderVo.getAmount());
+
+        // 订单入库
+        // 生成交易流水号（订单ID）
+        orderInfo.setId(generateOrderId());
+        orderInfo.setUserId(userInfo.getId());
+        orderInfo.setItemId(itemVo.getId());
+        orderInfo.setItemPrice(itemVo.getPrice());
+        orderInfo.setAmount(orderVo.getAmount());
+        orderInfo.setOrderPrice(itemVo.getPrice().multiply(BigDecimal.valueOf(orderVo.getAmount())));
+        orderInfoMapper.insert(orderInfo);
+
+        // 修改商品销量
+        itemService.increaseSales(itemVo.getId(), orderInfo.getAmount());
+
+        return orderInfo;
+    }
+
+```
+
+前端页面修改：
+
+```java
+    $(document).ready(function () {
+        // 获取商品详情
+        $.ajax({
+            type: "GET",
+            url: "http://localhost:8080/item/get",
+            data: {
+                "id": getParam("id"),
+            },
+            xhrFields: {
+                withCredentials: true
+            },
+            success: function (data) {
+                if (data.status === "success") {
+                    g_itemVO = data.data;
+                    reloadDom();
+                    setInterval(reloadDom, 1000);
+                } else {
+                    alert("获取信息失败: " + data.data.errorMsg);
+                }
+            },
+            error: function (data) {
+                alert("获取信息失败: " + data.responseText);
+            }
+        });
+
+        $("#createOrder").on("click", function () {
+            let amount = $("#amount").val();
+            $.ajax({
+                type: "POST",
+                url: "http://localhost:8080/order/createorder",
+                contentType: "application/json",
+                data: JSON.stringify({
+                    "itemId": g_itemVO.id,
+                    "amount": amount,
+                    "promoId": g_itemVO.promoVo.id,
+                }),
+                xhrFields: {
+                    withCredentials: true
+                },
+                success: function (data) {
+                    if (data.status === "success") {
+                        alert("下单成功");
+                        window.location.reload();
+                    } else {
+                        alert("下单失败: " + data.data.errorMsg);
+                        if (data.data.errorCode === 400003) {
+                            window.location.href = "login.html";
+                        }
+                    }
+                },
+                error: function (data) {
+                    alert("下单失败: " + data.responseText);
+                }
+            });
+        });
+    });
+
+    function reloadDom() {
+        $("#title").text(g_itemVO.title);
+        $("#imgUrl").attr("src", g_itemVO.imgUrl);
+        $("#description").text(g_itemVO.description);
+        $("#price").text(g_itemVO.price);
+        $("#stock").text(g_itemVO.stock);
+        $("#sales").text(g_itemVO.sales);
+        let promoVo = g_itemVO.promoVo;
+        if (promoVo.status === 1) {
+            // 秒杀活动还未开始
+            console.log(promoVo.startDate);
+            let startTime = promoVo.startDate.replace(new RegExp("-", "gm"), "/");
+            startTime = (new Date(startTime)).getTime();
+            let nowTime = Date.parse(new Date());
+            let delta = (startTime - nowTime) / 1000;
+            if (delta <= 0) {
+                // 活动开始了
+                promoVo.status = 2;
+                reloadDom();
+            }
+            $("#promoStartDate").text("秒杀活动将于：" + promoVo.startDate + " 开始售卖 倒计时：" + delta + "  秒");
+            $("#promoPrice").text(promoVo.promoItemPrice);
+            $("#createOrder").attr("disabled", true);
+        } else if (promoVo.status === 2) {
+            // 秒杀活动进行中
+            $("#promoStartDate").text("秒杀正在进行中");
+            $("#promoPrice").text(promoVo.promoItemPrice);
+            $("#createOrder").attr("disabled", false);
+            $("#normalPriceContainer").hide();
+        }
+    }
+```
 
 
 

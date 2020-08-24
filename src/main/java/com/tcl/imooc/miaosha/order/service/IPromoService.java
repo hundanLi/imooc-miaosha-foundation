@@ -1,5 +1,7 @@
 package com.tcl.imooc.miaosha.order.service;
 
+import com.tcl.imooc.miaosha.order.vo.PromoVo;
+
 /**
  * <p>
  *  服务类
@@ -9,6 +11,6 @@ package com.tcl.imooc.miaosha.order.service;
  * @date  2020-08-24
  * @version 0.0.1
  */
-public interface ISequenceInfoService {
-
+public interface IPromoService {
+    PromoVo getPromoByItemId(Integer itemId);
 }

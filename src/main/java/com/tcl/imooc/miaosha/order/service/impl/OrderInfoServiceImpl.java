@@ -9,7 +9,9 @@ import com.tcl.imooc.miaosha.order.entity.SequenceInfo;
 import com.tcl.imooc.miaosha.order.mapper.OrderInfoMapper;
 import com.tcl.imooc.miaosha.order.mapper.SequenceInfoMapper;
 import com.tcl.imooc.miaosha.order.service.IOrderInfoService;
+import com.tcl.imooc.miaosha.order.service.IPromoService;
 import com.tcl.imooc.miaosha.order.vo.OrderVo;
+import com.tcl.imooc.miaosha.order.vo.PromoVo;
 import com.tcl.imooc.miaosha.user.entity.UserInfo;
 import com.tcl.imooc.miaosha.user.service.IUserInfoService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -44,10 +46,14 @@ public class OrderInfoServiceImpl implements IOrderInfoService {
     @Autowired
     IItemService itemService;
 
+    @Autowired
+    IPromoService promoService;
 
     @Override
     @Transactional(rollbackFor = BusinessException.class)
     public OrderInfo createItem(OrderVo orderVo) throws BusinessException {
+        OrderInfo orderInfo = new OrderInfo();
+
         // 判断用户是否，订单号是否合法
         UserInfo userInfo = userInfoService.getById(orderVo.getUserId());
         if (userInfo == null) {
@@ -57,12 +63,24 @@ public class OrderInfoServiceImpl implements IOrderInfoService {
         if (itemVo == null) {
             throw new BusinessException(ErrorEnum.PARAMETER_INVALID.setErrorMsg("商品不存在！"));
         }
+        // 判断促销活动是否合法
+        if (orderVo.getPromoId() != null) {
+            PromoVo promoVo = promoService.getPromoByItemId(orderVo.getPromoId());
+            if (promoVo == null || !promoVo.getItemId().equals(itemVo.getId())) {
+                throw new BusinessException(ErrorEnum.PARAMETER_INVALID.setErrorMsg("活动信息不准确"));
+            } else if (promoVo.getStatus() != 2) {
+                throw new BusinessException(ErrorEnum.PARAMETER_INVALID.setErrorMsg("活动尚未开始"));
+            }
+            // 设置促销价格和订单促销id
+            itemVo.setPrice(promoVo.getPromoItemPrice());
+            orderInfo.setPromoId(promoVo.getId());
+
+        }
+
         // 商品减库存
         itemService.decreaseStock(orderVo.getItemId(), orderVo.getAmount());
 
-
         // 订单入库
-        OrderInfo orderInfo = new OrderInfo();
         // 生成交易流水号（订单ID）
         orderInfo.setId(generateOrderId());
         orderInfo.setUserId(userInfo.getId());
@@ -92,6 +110,9 @@ public class OrderInfoServiceImpl implements IOrderInfoService {
         // 中间6位是递增序列
         SequenceInfo sequenceInfo = sequenceInfoMapper.selectByName("order_info");
         Integer currentValue = sequenceInfo.getCurrentValue();
+        // 修改数据库流水号
+        sequenceInfo.setCurrentValue(currentValue + sequenceInfo.getStep());
+        sequenceInfoMapper.updateById(sequenceInfo);
         String mid = currentValue.toString();
         for (int i = 0; i < 6 - mid.length(); i++) {
             orderId.append('0');

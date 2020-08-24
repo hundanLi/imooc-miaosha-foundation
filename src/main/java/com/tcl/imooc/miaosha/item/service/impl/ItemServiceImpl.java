@@ -13,6 +13,8 @@ import com.tcl.imooc.miaosha.item.mapper.ItemStockMapper;
 import com.tcl.imooc.miaosha.item.service.IItemService;
 import com.tcl.imooc.miaosha.item.service.IItemStockService;
 import com.tcl.imooc.miaosha.item.vo.ItemVo;
+import com.tcl.imooc.miaosha.order.service.IPromoService;
+import com.tcl.imooc.miaosha.order.vo.PromoVo;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -41,6 +43,9 @@ public class ItemServiceImpl implements IItemService {
 
     @Autowired
     IItemStockService stockService;
+
+    @Autowired
+    IPromoService promoService;
 
     @Override
     public ItemVo createItem(ItemVo itemVo) {
@@ -100,6 +105,11 @@ public class ItemServiceImpl implements IItemService {
         ItemStock itemStock = stockService.selectByItemId(itemId);
         itemVo.setStock(itemStock.getStock());
 
+        // 查询促销信息
+        PromoVo promoVo = promoService.getPromoByItemId(itemId);
+        if (promoVo != null && promoVo.getStatus() < 3) {
+            itemVo.setPromoVo(promoVo);
+        }
         return itemVo;
     }
 

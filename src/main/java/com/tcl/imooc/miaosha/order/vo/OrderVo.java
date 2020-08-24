@@ -2,6 +2,7 @@ package com.tcl.imooc.miaosha.order.vo;
 
 import lombok.Data;
 
+import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
 
@@ -15,10 +16,13 @@ public class OrderVo {
     @NotNull
     @Min(1)
     private Integer itemId;
-//    @NotNull
     @Min(1)
     private Integer userId;
     @NotNull
     @Min(1)
+    @Max(3)
     private Integer amount;
+
+    @Min(1)
+    private Integer promoId;
 }
