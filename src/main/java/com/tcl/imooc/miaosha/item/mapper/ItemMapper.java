@@ -2,6 +2,7 @@ package com.tcl.imooc.miaosha.item.mapper;
 
 import com.tcl.imooc.miaosha.item.entity.Item;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import org.apache.ibatis.annotations.Param;
 import org.springframework.stereotype.Repository;
 
 /**
@@ -16,4 +17,5 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface ItemMapper extends BaseMapper<Item> {
 
+    void increaseSales(@Param("itemId") Integer itemId, @Param("amount") Integer amount);
 }

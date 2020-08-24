@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.tcl.imooc.miaosha.common.error.BusinessException;
+import com.tcl.imooc.miaosha.common.error.ErrorEnum;
 import com.tcl.imooc.miaosha.item.entity.Item;
 import com.tcl.imooc.miaosha.item.entity.ItemStock;
 import com.tcl.imooc.miaosha.item.mapper.ItemMapper;
@@ -99,5 +101,20 @@ public class ItemServiceImpl implements IItemService {
         itemVo.setStock(itemStock.getStock());
 
         return itemVo;
+    }
+
+    @Override
+    public void decreaseStock(Integer itemId, Integer amount) throws BusinessException {
+        ItemStock itemStock = stockService.selectByItemId(itemId);
+        if (itemStock.getStock() < amount) {
+            throw new BusinessException(ErrorEnum.PARAMETER_INVALID.setErrorMsg("商品库存不足！仅剩" + itemStock.getStock() + "件"));
+        }
+        itemStock.setStock(itemStock.getStock() - amount);
+        stockMapper.updateById(itemStock);
+    }
+
+    @Override
+    public void increaseSales(Integer itemId, Integer amount) {
+        itemMapper.increaseSales(itemId, amount);
     }
 }

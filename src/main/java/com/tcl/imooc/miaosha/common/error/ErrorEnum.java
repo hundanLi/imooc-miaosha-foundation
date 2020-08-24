@@ -9,9 +9,10 @@ public enum ErrorEnum implements Error {
     /**
      * 枚举实例
      */
-    DATA_INVALID(100001, "参数不合法"),
+    PARAMETER_INVALID(100001, "参数不合法"),
     DATA_NOT_EXIST(400001, "数据不存在"),
     PASSWORD_INCORRECT(400002, "输入密码错误"),
+    USER_NOT_LOGIN(400003, "用户未登录"),
     UNKNOWN_ERROR(500000, "未知错误")
     ;
 

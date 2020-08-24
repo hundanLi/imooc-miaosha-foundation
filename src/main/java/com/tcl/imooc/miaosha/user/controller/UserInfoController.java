@@ -61,7 +61,7 @@ public class UserInfoController {
         String otpCode = registerVo.getOtpCode();
         String sessionOtp = (String) request.getSession().getAttribute(registerVo.getTelephone());
         if (!StringUtils.equals(otpCode, sessionOtp)) {
-            throw new BusinessException(ErrorEnum.DATA_INVALID, ErrorEnum.DATA_INVALID.getErrorMsg());
+            throw new BusinessException(ErrorEnum.PARAMETER_INVALID, ErrorEnum.PARAMETER_INVALID.getErrorMsg());
         }
         service.register(registerVo);
 

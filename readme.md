@@ -1132,7 +1132,7 @@ Service：
 
 ## 5. 商品信息模块
 
-### 5.1 MyBatis Plus代码生成
+### 5.1 代码生成
 
 运行MyBatis-Plus代码生成器，模块名和数据表分别输入"item"以及"item,item_stock"，即可快速生成商品模块的controller，service，mapper和entity的代码。
 
@@ -1492,6 +1492,207 @@ Service：
 ### 5.4 商品详情
 
 类似，不再列出。查看完整代码。
+
+
+
+## 6. 商品交易模块
+
+### 6.1  代码生成
+
+数据库设计：
+
+订单表
+
+```sql
+CREATE TABLE `order_info`  (
+  `id` varchar(32) CHARACTER SET utf8 COLLATE utf8_bin NOT NULL,
+  `user_id` int(11) NOT NULL DEFAULT 0,
+  `item_id` int(11) NOT NULL DEFAULT 0,
+  `item_price` decimal(10, 2) NOT NULL DEFAULT 0.00,
+  `amount` int(11) NOT NULL DEFAULT 0,
+  `order_price` decimal(40, 2) NOT NULL DEFAULT 0.00,
+  PRIMARY KEY (`id`) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8 COLLATE = utf8_bin ROW_FORMAT = Compact;
+```
+
+用于生成交易流水号（订单ID）的表：
+
+```sql
+CREATE TABLE `sequence_info`  (
+  `name` varchar(255) CHARACTER SET utf8 COLLATE utf8_bin NOT NULL,
+  `current_value` int(11) NOT NULL DEFAULT 0,
+  `step` int(11) NOT NULL DEFAULT 0,
+  PRIMARY KEY (`name`) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8 COLLATE = utf8_bin ROW_FORMAT = Compact;
+```
+
+与前面类似，使用MyBatis Plus生成器生成代码。
+
+**注意**：因为订单ID是自主生成，因此在`OrderInfo`类的id字段添加注解`@TableId(type = IdType.INPUT)`。
+
+### 6.2 交易下单
+
+#### 1. 订单Service逻辑
+
+```java
+@Data
+public class OrderVo {
+    @NotNull
+    @Min(1)
+    private Integer itemId;
+//    @NotNull
+    @Min(1)
+    private Integer userId;
+    @NotNull
+    @Min(1)
+    private Integer amount;
+}
+```
+
+```java
+    @Override
+    @Transactional(rollbackFor = BusinessException.class)
+    public OrderInfo createItem(OrderVo orderVo) throws BusinessException {
+        // 判断用户是否，订单号是否合法
+        UserInfo userInfo = userInfoService.getById(orderVo.getUserId());
+        if (userInfo == null) {
+            throw new BusinessException(ErrorEnum.PARAMETER_INVALID.setErrorMsg("用户不存在！"));
+        }
+        ItemVo itemVo = itemService.getItemById(orderVo.getItemId());
+        if (itemVo == null) {
+            throw new BusinessException(ErrorEnum.PARAMETER_INVALID.setErrorMsg("商品不存在！"));
+        }
+        // 商品减库存
+        itemService.decreaseStock(orderVo.getItemId(), orderVo.getAmount());
+
+
+        // 订单入库
+        OrderInfo orderInfo = new OrderInfo();
+        // 生成交易流水号（订单ID）
+        orderInfo.setId(generateOrderId());
+        orderInfo.setUserId(userInfo.getId());
+        orderInfo.setItemId(itemVo.getId());
+        orderInfo.setItemPrice(itemVo.getPrice());
+        orderInfo.setAmount(orderVo.getAmount());
+        orderInfo.setOrderPrice(itemVo.getPrice().multiply(BigDecimal.valueOf(orderVo.getAmount())));
+        orderInfoMapper.insert(orderInfo);
+
+        // 修改商品销量
+        itemService.increaseSales(itemVo.getId(), orderInfo.getAmount());
+
+        return orderInfo;
+    }
+```
+
+订单号生成：
+
+```java
+/**
+     * @return 订单号
+     */
+    private String generateOrderId() {
+        // 订单号包含16位
+        StringBuilder orderId = new StringBuilder();
+        // 前8位是时间：年月日
+        String prefix = LocalDateTime.now().format(DateTimeFormatter.ISO_DATE).replace("-", "");
+        orderId.append(prefix);
+
+        // 中间6位是递增序列
+        SequenceInfo sequenceInfo = sequenceInfoMapper.selectByName("order_info");
+        Integer currentValue = sequenceInfo.getCurrentValue();
+        String mid = currentValue.toString();
+        for (int i = 0; i < 6 - mid.length(); i++) {
+            orderId.append('0');
+        }
+        orderId.append(mid);
+
+        //最后2位是数据库分库分表信息，保留
+        orderId.append("00");
+        return orderId.toString();
+    }
+```
+
+#### 2. 商品库存和销量修改
+
+```java
+    @Override
+    public void decreaseStock(Integer itemId, Integer amount) throws BusinessException {
+        ItemStock itemStock = stockService.selectByItemId(itemId);
+        if (itemStock.getStock() < amount) {
+            throw new BusinessException(ErrorEnum.PARAMETER_INVALID.setErrorMsg("商品库存不足！仅剩" + itemStock.getStock() + "件"));
+        }
+        itemStock.setStock(itemStock.getStock() - amount);
+        stockMapper.updateById(itemStock);
+    }
+
+    @Override
+    public void increaseSales(Integer itemId, Integer amount) {
+        itemMapper.increaseSales(itemId, amount);
+    }
+```
+
+```xml
+    <update id="increaseSales">
+        update item
+        set sales = sales + #{amount}
+        where id = #{itemId};
+    </update>
+```
+
+#### 3. Controller逻辑
+
+```java
+    @Autowired
+    IOrderInfoService orderInfoService;
+
+    @PostMapping("/createorder")
+    public Result createOrder(@RequestBody @Valid OrderVo orderVo, HttpServletRequest request) throws BusinessException {
+        // 验证是否登录
+        Boolean isLogin = (Boolean) request.getSession().getAttribute("IS_LOGIN");
+        if (isLogin == null || !isLogin) {
+            throw new BusinessException(ErrorEnum.USER_NOT_LOGIN);
+        }
+        UserInfo user = (UserInfo) request.getSession().getAttribute("LOGIN_USER");
+        orderVo.setUserId(user.getId());
+
+        OrderInfo orderInfo = orderInfoService.createItem(orderVo);
+        return Result.success(orderInfo);
+    }
+```
+
+#### 4. getitem.html页面修改
+
+```javascript
+        $("#createOrder").on("click", function () {
+            $.ajax({
+                type: "POST",
+                url: "http://localhost:8080/order/createorder",
+                contentType: "application/json",
+                data: JSON.stringify({
+                    "itemId": g_itemVO.id,
+                    "amount": 1, //暂时写死为一件
+                    "promoId": g_itemVO.promoId,
+                }),
+                xhrFields: {
+                    withCredentials: true
+                },
+                success: function (data) {
+                    if (data.status === "success") {
+                        alert("下单成功");
+                        window.location.reload();
+                    } else {
+                        alert("下单失败: " + data.data.errorMsg);
+                        if (data.data.errorCode === 400003) {
+                            window.location.href = "login.html";
+                        }
+                    }
+                },
+                error: function (data) {
+                    alert("下单失败：" + data.responseText);
+                }
+            });
+        });
+```
 
 
 

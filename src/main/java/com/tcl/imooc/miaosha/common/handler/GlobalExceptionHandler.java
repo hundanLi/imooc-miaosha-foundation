@@ -43,8 +43,8 @@ public class GlobalExceptionHandler {
     public Result handleException(HttpMessageNotReadableException e) {
         log.error("参数转换错误: {}", e.getMessage());
         HashMap<String, Object> data = new HashMap<>(2);
-        data.put("errorCode", ErrorEnum.DATA_INVALID.getErrorCode());
-        data.put("errorMsg", ErrorEnum.DATA_INVALID.getErrorMsg());
+        data.put("errorCode", ErrorEnum.PARAMETER_INVALID.getErrorCode());
+        data.put("errorMsg", ErrorEnum.PARAMETER_INVALID.getErrorMsg());
         return Result.fail(data);
     }
 
@@ -59,7 +59,7 @@ public class GlobalExceptionHandler {
             data.put("errorCode", businessException.getErrorCode());
             data.put("errorMsg", businessException.getErrorMsg());
         } else {
-            log.error("未知异常：{}", e.toString());
+            log.error("未知异常：", e);
             data.put("errorCode", ErrorEnum.UNKNOWN_ERROR.getErrorCode());
             data.put("errorMsg", ErrorEnum.UNKNOWN_ERROR.getErrorMsg());
             data.put("data", e.getMessage());

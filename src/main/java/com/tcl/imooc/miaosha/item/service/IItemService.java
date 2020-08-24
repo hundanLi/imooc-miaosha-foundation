@@ -1,6 +1,7 @@
 package com.tcl.imooc.miaosha.item.service;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.tcl.imooc.miaosha.common.error.BusinessException;
 import com.tcl.imooc.miaosha.item.vo.ItemVo;
 
 /**
@@ -20,4 +21,7 @@ public interface IItemService {
 
     ItemVo getItemById(Integer itemId);
 
+    void decreaseStock(Integer itemId, Integer amount) throws BusinessException;
+
+    void increaseSales(Integer itemId, Integer amount);
 }

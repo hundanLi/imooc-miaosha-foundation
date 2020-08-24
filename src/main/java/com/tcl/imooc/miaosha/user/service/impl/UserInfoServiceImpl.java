@@ -10,7 +10,6 @@ import com.tcl.imooc.miaosha.user.mapper.UserPasswordMapper;
 import com.tcl.imooc.miaosha.user.service.IUserInfoService;
 import com.tcl.imooc.miaosha.user.vo.LoginVo;
 import com.tcl.imooc.miaosha.user.vo.RegisterVo;
-import lombok.SneakyThrows;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DuplicateKeyException;
@@ -53,7 +52,7 @@ public class UserInfoServiceImpl implements IUserInfoService {
         try {
             userInfoMapper.insert(userInfo);
         } catch (DuplicateKeyException e) {
-            throw new BusinessException(ErrorEnum.DATA_INVALID.setErrorMsg("手机号码已经被注册"));
+            throw new BusinessException(ErrorEnum.PARAMETER_INVALID.setErrorMsg("手机号码已经被注册"));
         }
 
         // 2.密码加密+保存
