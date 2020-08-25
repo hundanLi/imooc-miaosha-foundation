@@ -11,6 +11,8 @@ spring:
       enabled: true
     restart:
       enabled: true
+  resources:
+    static-locations:
 
 # mybatis配置
 mybatis-plus:

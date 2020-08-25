@@ -19,7 +19,7 @@ import javax.validation.Valid;
  * @date  2020-08-22
  * @version 0.0.1
  */
-@CrossOrigin(origins = "*", allowCredentials = "true")
+@CrossOrigin(allowCredentials = "true")
 @RestController
 @RequestMapping("/item")
 public class ItemController {

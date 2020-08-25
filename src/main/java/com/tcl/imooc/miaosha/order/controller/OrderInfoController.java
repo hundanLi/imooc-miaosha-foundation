@@ -9,11 +9,7 @@ import com.tcl.imooc.miaosha.order.service.IOrderInfoService;
 import com.tcl.imooc.miaosha.order.vo.OrderVo;
 import com.tcl.imooc.miaosha.user.entity.UserInfo;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.validation.Valid;
@@ -27,6 +23,7 @@ import javax.validation.Valid;
  * @version 0.0.1
  * @date 2020-08-24
  */
+@CrossOrigin(allowCredentials = "true")
 @RestController
 @RequestMapping("/order")
 public class OrderInfoController {

@@ -28,7 +28,7 @@ import java.util.concurrent.ThreadLocalRandom;
  * @date  2020-08-21
  * @version 0.0.1
  */
-@CrossOrigin(allowCredentials = "true", allowedHeaders = "*")
+@CrossOrigin(allowCredentials = "true")
 @Slf4j
 @RestController
 @RequestMapping("/user")
