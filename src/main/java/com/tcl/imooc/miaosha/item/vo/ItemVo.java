@@ -1,6 +1,5 @@
 package com.tcl.imooc.miaosha.item.vo;
 
-import com.baomidou.mybatisplus.annotation.TableField;
 import com.tcl.imooc.miaosha.order.vo.PromoVo;
 import lombok.Data;
 
