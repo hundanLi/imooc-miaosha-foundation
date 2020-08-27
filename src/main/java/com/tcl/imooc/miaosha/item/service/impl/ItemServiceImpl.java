@@ -1,7 +1,7 @@
 package com.tcl.imooc.miaosha.item.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.tcl.imooc.miaosha.common.error.BusinessException;
@@ -18,6 +18,7 @@ import com.tcl.imooc.miaosha.order.vo.PromoVo;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.function.Function;
@@ -114,13 +115,17 @@ public class ItemServiceImpl implements IItemService {
     }
 
     @Override
+    @Transactional(rollbackFor = BusinessException.class)
     public void decreaseStock(Integer itemId, Integer amount) throws BusinessException {
         ItemStock itemStock = stockService.selectByItemId(itemId);
         if (itemStock.getStock() < amount) {
             throw new BusinessException(ErrorEnum.PARAMETER_INVALID.setErrorMsg("商品库存不足！仅剩" + itemStock.getStock() + "件"));
         }
         itemStock.setStock(itemStock.getStock() - amount);
-        stockMapper.updateById(itemStock);
+        int rows = stockMapper.updateById(itemStock);
+        if (rows < 1) {
+            throw new BusinessException(ErrorEnum.PARAMETER_INVALID.setErrorMsg("商品库存不足！仅剩" + itemStock.getStock() + "件"));
+        }
     }
 
     @Override

@@ -5,6 +5,6 @@
     <select id="selectByName" resultType="com.tcl.imooc.miaosha.order.entity.SequenceInfo">
         select name, current_value, step
         from sequence_info
-        where name = #{name};
+        where name = #{name} for update;
     </select>
 </mapper>
